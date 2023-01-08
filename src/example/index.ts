@@ -1,4 +1,4 @@
-import { MTAServerResponse, getServerInfo } from "./../index.js";
+import { MTAServerResponse, getServerInfo } from "../index";
 
 void async function test() {
     const result: MTAServerResponse | false = await getServerInfo(`lime.dayzmta.ru`, 22003);

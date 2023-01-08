@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const index_js_1 = require("./../index.js");
+const index_1 = require("../index");
 void async function test() {
-    const result = await (0, index_js_1.getServerInfo)(`lime.dayzmta.ru`, 22003);
+    const result = await (0, index_1.getServerInfo)(`lime.dayzmta.ru`, 22003);
     if (result == false) {
         console.log(`Error request server info...`);
     }

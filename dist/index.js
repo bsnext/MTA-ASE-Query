@@ -7,13 +7,11 @@ const socketRequestTag = buffer_1.Buffer.from(`s`);
 const socketResponseTag = `EYE1`;
 const socketResponseGame = `mta`;
 const socketTimeout = 7500;
-;
 let ord = function (char) {
     let ch = char.charCodeAt(0);
     if (ch > 0xFF) {
         ch -= 0x350;
     }
-    ;
     return ch;
 };
 function getServerInfo(ip, port) {
@@ -22,25 +20,22 @@ function getServerInfo(ip, port) {
             resolve(false);
             return;
         }
-        ;
-        let client = dgram.createSocket('udp4');
+        let client = dgram.createSocket(`udp4`);
         let messageListener = function (receiveData) {
             endListenerTask();
             let index = 0;
-            let receiveTag = receiveData.subarray(index, index += 4).toString('utf-8');
+            let receiveTag = receiveData.subarray(index, index += 4).toString(`utf-8`);
             if (receiveTag != socketResponseTag) {
                 resolve(false);
                 return;
             }
-            ;
             let dataLength, data;
             let info = [];
             for (let i = 0; i < 9; i++) {
-                dataLength = ord(receiveData.subarray(index, index += 1).toString('utf-8'));
-                data = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                dataLength = ord(receiveData.subarray(index, index += 1).toString(`utf-8`));
+                data = receiveData.subarray(index, (index += (dataLength - 1))).toString(`utf-8`);
                 info[i] = data;
             }
-            ;
             let returnTable = {
                 name: info[2],
                 gamemode: info[3],
@@ -54,7 +49,6 @@ function getServerInfo(ip, port) {
                 resolve(false);
                 return;
             }
-            ;
             resolve(returnTable);
         };
         let errorListener = function () {
@@ -63,8 +57,8 @@ function getServerInfo(ip, port) {
         };
         let endListenerTask = function () {
             client.close();
-            client.removeListener('message', messageListener);
-            client.removeListener('error', errorListener);
+            client.removeListener(`message`, messageListener);
+            client.removeListener(`error`, errorListener);
             stopTimeoutInterval();
         };
         let timeoutInterval;
@@ -72,25 +66,21 @@ function getServerInfo(ip, port) {
             if (!timeoutInterval) {
                 return;
             }
-            ;
             clearTimeout(timeoutInterval);
             timeoutInterval = undefined;
         };
         client.connect(port + 123, ip, function () {
             timeoutInterval = setTimeout(errorListener, socketTimeout);
             try {
-                client.send(socketRequestTag, function () {
-                    client.on('message', messageListener);
-                });
+                client.send(socketRequestTag);
             }
             catch (e) {
                 errorListener();
             }
-            ;
         });
-        client.on('error', errorListener);
+        client.on(`message`, messageListener);
+        client.on(`error`, errorListener);
     });
 }
 exports.getServerInfo = getServerInfo;
-;
 //# sourceMappingURL=index.js.map

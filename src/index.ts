@@ -1,6 +1,6 @@
 
 import * as dgram from "dgram";
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 
 ////////////////////////////////
 
@@ -20,7 +20,7 @@ export declare interface MTAServerResponse {
     private: boolean;
     players: number;
     max_players: number;
-};
+}
 
 ////////////////////////////////
 
@@ -29,10 +29,10 @@ let ord = function (char: string): number {
 
     if (ch > 0xFF) {
         ch -= 0x350;
-    };
+    }
 
     return ch;
-};
+}
 
 export function getServerInfo(ip: string, port: number): Promise<MTAServerResponse | false> {
     return new Promise(
@@ -40,29 +40,29 @@ export function getServerInfo(ip: string, port: number): Promise<MTAServerRespon
             if ((port < 1) || (port > 65535)) {
                 resolve(false);
                 return;
-            };
+            }
 
-            let client = dgram.createSocket('udp4');
+            let client = dgram.createSocket(`udp4`);
 
             let messageListener = function (receiveData): void {
                 endListenerTask();
 
                 let index: number = 0;
-                let receiveTag: string = receiveData.subarray(index, index += 4).toString('utf-8');
+                let receiveTag: string = receiveData.subarray(index, index += 4).toString(`utf-8`);
 
                 if (receiveTag != socketResponseTag) {
                     resolve(false);
                     return;
-                };
+                }
 
                 let dataLength: number, data: string;
                 let info: Array<string> = [];
 
                 for (let i = 0; i < 9; i++) {
-                    dataLength = ord(receiveData.subarray(index, index += 1).toString('utf-8'));
-                    data = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                    dataLength = ord(receiveData.subarray(index, index += 1).toString(`utf-8`));
+                    data = receiveData.subarray(index, (index += (dataLength - 1))).toString(`utf-8`);
                     info[i] = data;
-                };
+                }
 
                 let returnTable: MTAServerResponse = {
                     name: info[2],
@@ -72,57 +72,55 @@ export function getServerInfo(ip: string, port: number): Promise<MTAServerRespon
                     private: info[6] == `1`,
                     players: parseInt(info[7]),
                     max_players: parseInt(info[8])
-                };
+                }
 
                 if (info[0] != socketResponseGame) {
                     resolve(false);
                     return;
-                };
+                }
 
                 resolve(returnTable);
-            };
+            }
 
             let errorListener = function (): void {
                 endListenerTask();
                 resolve(false);
-            };
+            }
 
             let endListenerTask = function (): void {
                 client.close();
 
-                client.removeListener('message', messageListener);
-                client.removeListener('error', errorListener);
+                client.removeListener(`message`, messageListener);
+                client.removeListener(`error`, errorListener);
 
                 stopTimeoutInterval();
-            };
+            }
 
-            let timeoutInterval: NodeJS.Timeout;
+            let timeoutInterval: NodeJS.Timeout | undefined;
             let stopTimeoutInterval = function (): void {
                 if (!timeoutInterval) {
                     return;
-                };
+                }
 
                 clearTimeout(timeoutInterval);
                 timeoutInterval = undefined;
-            };
+            }
+            
 
             client.connect(port + 123, ip,
                 function () {
                     timeoutInterval = setTimeout(errorListener, socketTimeout);
 
                     try {
-                        client.send(socketRequestTag,
-                            function () {
-                                client.on('message', messageListener);
-                            }
-                        );
+                        client.send(socketRequestTag);
                     } catch (e) {
                         errorListener();
-                    }; 
+                    }
                 }
             );
 
-            client.on('error', errorListener);
+            client.on(`message`, messageListener);
+            client.on(`error`, errorListener);
         }
     );
-};
+}
