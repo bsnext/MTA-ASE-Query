@@ -1,17 +1,36 @@
 {
-  "name": "mta-ase-query",
+  "name": "@bsnext/mta-ase-query",
   "version": "1.0.0",
-  "description": "",
+  "description": "Node.JS library for send requests to MTA:SA servers and get basic info.",
   "main": "dist/index.js",
+	"types": "dist/index.d.ts",
   "scripts": {
     "example": "node dist/example/index.js",
     "start": "node dist/index.js",
     "build": "tsc --project tsconfig.json",
     "watch": "tsc --watch"
   },
-  "author": "",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bsnext/MTA-ASE-Query.git"
+	},
+	"keywords": [
+		"nodejs",
+		"typescript",
+		"mta",
+		"mtasa",
+		"ase",
+		"multitheftauto",
+    "server",
+    "query"
+	],
+	"bugs": {
+		"url": "https://github.com/bsnext/MTA-ASE-Query/issues"
+	},
+	"homepage": "https://github.com/bsnext/MTA-ASE-Query#readme",
+  "author": "SalwadoR",
   "type": "commonjs",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
   },
   "devDependencies": {
