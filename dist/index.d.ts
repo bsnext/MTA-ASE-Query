@@ -7,4 +7,4 @@ export declare interface MTAServerResponse {
     players: number;
     max_players: number;
 }
-export declare function getServerInfo(ip: string, port: number): Promise<MTAServerResponse | false>;
+export declare function getServerInfo(ip: string, port: number, timeout?: number): Promise<MTAServerResponse>;

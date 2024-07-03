@@ -5,8 +5,8 @@ import { Buffer } from "buffer";
 ////////////////////////////////
 
 const socketRequestTag: Buffer = Buffer.from(`s`);
-const socketResponseTag: string = `EYE1`;
-const socketResponseGame: string = `mta`;
+const socketResponseTag: Buffer = Buffer.from(`EYE1`);
+const socketResponseGame: Buffer = Buffer.from(`mta`);
 
 const socketTimeout: number = 7500;
 
@@ -24,59 +24,52 @@ export declare interface MTAServerResponse {
 
 ////////////////////////////////
 
-let ord = function (char: string): number {
-    let ch: number = char.charCodeAt(0);
-
-    if (ch > 0xFF) {
-        ch -= 0x350;
-    }
-
-    return ch;
-}
-
-export function getServerInfo(ip: string, port: number): Promise<MTAServerResponse | false> {
+export function getServerInfo(ip: string, port: number, timeout: number = socketTimeout): Promise<MTAServerResponse> {
     return new Promise(
         function (resolve, reject) {
-            if ((port < 1) || (port > 65535)) {
-                resolve(false);
+            if ((port < 1) || (port > 65412)) { // 65535 - 123
+                reject(`Invalid port, should be > 0 and < 65413`);
                 return;
             }
 
             let client = dgram.createSocket(`udp4`);
 
-            let messageListener = function (receiveData): void {
+            let messageListener = function (receiveData: Buffer): void {
                 endListenerTask();
 
                 let index: number = 0;
-                let receiveTag: string = receiveData.subarray(index, index += 4).toString(`utf-8`);
+                let receiveTag: Buffer = receiveData.subarray(index, index += 4);
 
-                if (receiveTag != socketResponseTag) {
-                    resolve(false);
+                if (!socketResponseTag.equals(receiveTag)) {
+                    reject(`Invalid query tag in response`);
                     return;
                 }
 
                 let dataLength: number, data: string;
                 let info: Array<string> = [];
 
-                for (let i = 0; i < 9; i++) {
-                    dataLength = ord(receiveData.subarray(index, index += 1).toString(`utf-8`));
-                    data = receiveData.subarray(index, (index += (dataLength - 1))).toString(`utf-8`);
+                dataLength = receiveData.subarray(index, index += 1).readUint8();
+                let game = receiveData.subarray(index, (index += (dataLength - 1))); 
+
+                if (!socketResponseGame.equals(game)) {
+                    reject(`Invalid game in response`);
+                    return;
+                }
+
+                for (let i = 0; i < 8; i++) {
+                    dataLength = receiveData.subarray(index, index += 1).readUint8();
+                    data = receiveData.subarray(index, (index += (dataLength - 1))).toString(`utf-8`); 
                     info[i] = data;
                 }
 
                 let returnTable: MTAServerResponse = {
-                    name: info[2],
-                    gamemode: info[3],
-                    map: info[4],
-                    version: info[5],
-                    private: info[6] == `1`,
-                    players: parseInt(info[7]),
-                    max_players: parseInt(info[8])
-                }
-
-                if (info[0] != socketResponseGame) {
-                    resolve(false);
-                    return;
+                    name: info[1],
+                    gamemode: info[2],
+                    map: info[3],
+                    version: info[4],
+                    private: info[5] === `1`,
+                    players: parseInt(info[6]),
+                    max_players: parseInt(info[7])
                 }
 
                 resolve(returnTable);
@@ -84,14 +77,19 @@ export function getServerInfo(ip: string, port: number): Promise<MTAServerRespon
 
             let errorListener = function (): void {
                 endListenerTask();
-                resolve(false);
+                reject(`Socket error`);
+            }
+
+            let timeoutErrorListener = function (): void {
+                endListenerTask();
+                reject(`Request is timed out`);
             }
 
             let endListenerTask = function (): void {
                 client.close();
-
                 client.removeListener(`message`, messageListener);
                 client.removeListener(`error`, errorListener);
+                client.unref();
 
                 stopTimeoutInterval();
             }
@@ -104,12 +102,11 @@ export function getServerInfo(ip: string, port: number): Promise<MTAServerRespon
 
                 clearTimeout(timeoutInterval);
                 timeoutInterval = undefined;
-            }
-            
+            }            
 
             client.connect(port + 123, ip,
                 function () {
-                    timeoutInterval = setTimeout(errorListener, socketTimeout);
+                    timeoutInterval = setTimeout(timeoutErrorListener, timeout);
 
                     try {
                         client.send(socketRequestTag);
