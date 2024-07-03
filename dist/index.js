@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getServerInfo = void 0;
-const dgram = require("dgram");
-const buffer_1 = require("buffer");
-const socketRequestTag = buffer_1.Buffer.from(`s`);
-const socketResponseTag = buffer_1.Buffer.from(`EYE1`);
-const socketResponseGame = buffer_1.Buffer.from(`mta`);
+const dgram = require("node:dgram");
+const node_buffer_1 = require("node:buffer");
+const socketRequestTag = node_buffer_1.Buffer.from(`s`);
+const socketResponseTag = node_buffer_1.Buffer.from(`EYE1`);
+const socketResponseGame = node_buffer_1.Buffer.from(`mta`);
+const endServerInfoSuffix = node_buffer_1.Buffer.from([0x01]);
+const startPlayerInfoPrefix = node_buffer_1.Buffer.from([0x00 | 0x01 | 0x02 | 0x04 | 0x08 | 0x16 | 0x32]);
 const socketTimeout = 7500;
 function getServerInfo(ip, port, timeout = socketTimeout) {
     return new Promise(function (resolve, reject) {
@@ -24,6 +26,8 @@ function getServerInfo(ip, port, timeout = socketTimeout) {
             }
             let dataLength, data;
             let info = [];
+            let rules = [];
+            let players_list = [];
             dataLength = receiveData.subarray(index, index += 1).readUint8();
             let game = receiveData.subarray(index, (index += (dataLength - 1)));
             if (!socketResponseGame.equals(game)) {
@@ -35,14 +39,43 @@ function getServerInfo(ip, port, timeout = socketTimeout) {
                 data = receiveData.subarray(index, (index += (dataLength - 1))).toString(`utf-8`);
                 info[i] = data;
             }
+            while (!endServerInfoSuffix.equals(receiveData.subarray(index, (index + 1)))) {
+                dataLength = receiveData.subarray(index, index += 1).readUint8();
+                let ruleName = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                dataLength = receiveData.subarray(index, index += 1).readUint8();
+                let ruleValue = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                rules.push({
+                    name: ruleName,
+                    value: ruleValue
+                });
+            }
+            index += 1;
+            while (startPlayerInfoPrefix.equals(receiveData.subarray(index, (index += 1)))) {
+                dataLength = receiveData.subarray(index, index += 1).readUint8();
+                let playerName = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                index += 1;
+                index += 1;
+                dataLength = receiveData.subarray(index, index += 1).readUint8();
+                let playerScore = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                dataLength = receiveData.subarray(index, index += 1).readUint8();
+                let playerPing = receiveData.subarray(index, (index += (dataLength - 1))).toString('utf-8');
+                index += 1;
+                players_list.push({
+                    name: playerName,
+                    ping: parseInt(playerPing) || 0,
+                    score: parseInt(playerScore) || 0
+                });
+            }
             let returnTable = {
                 name: info[1],
                 gamemode: info[2],
                 map: info[3],
                 version: info[4],
                 private: info[5] === `1`,
-                players: parseInt(info[6]),
-                max_players: parseInt(info[7])
+                players: parseInt(info[6]) || 0,
+                max_players: parseInt(info[7]) || 0,
+                rules: rules,
+                players_list: players_list
             };
             resolve(returnTable);
         };

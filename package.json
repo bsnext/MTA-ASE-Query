@@ -1,6 +1,6 @@
 {
   "name": "@bsnext/mta-ase-query",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Node.JS library for send requests to MTA:SA servers and get basic info.",
   "main": "dist/index.js",
 	"types": "dist/index.d.ts",
