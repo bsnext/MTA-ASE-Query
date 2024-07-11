@@ -1,11 +1,10 @@
 {
   "name": "@bsnext/mta-ase-query",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "Node.JS library for send requests to MTA:SA servers and get basic info.",
   "main": "dist/index.js",
 	"types": "dist/index.d.ts",
   "scripts": {
-    "example": "node dist/example/index.js",
     "start": "node dist/index.js",
     "build": "tsc --project tsconfig.json",
     "watch": "tsc --watch"

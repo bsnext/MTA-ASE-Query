@@ -1,3 +1,5 @@
 /src/**/*.ts
+/src/example/**
 /dist/example/**
 tsconfig.json
+.github/**

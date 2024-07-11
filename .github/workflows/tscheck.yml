@@ -1,0 +1,27 @@
+name: "TypeScript Compilation Checking"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  start:
+    name: Start
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Basic (1/1) - Checkout Project
+        uses: actions/checkout@v4
+
+      - name: Bun (1/2) - Installing
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Bun (2/2) - Modules Installing
+        run: bun install
+
+      - name: Build (1/1) - TypeScript Compilation
+        run: bun run build

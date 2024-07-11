@@ -1,5 +1,6 @@
 
 import * as dgram from "node:dgram";
+import * as https from "node:https";
 import { Buffer } from "node:buffer";
 
 ////////////////////////////////
@@ -13,10 +14,14 @@ const startPlayerInfoPrefix: Buffer = Buffer.from([0x00 | 0x01 | 0x02 | 0x04 | 0
 
 const socketTimeout: number = 7500;
 
+const utf8Decoder = new TextDecoder('utf-8');
+
 ////////////////////////////////
 
-export declare interface MTAServerResponse {
+export interface MTAServerResponse {
     name: string;
+    ip: string;
+    port: number;
     gamemode: string;
     map: string;
     version: string;
@@ -27,16 +32,44 @@ export declare interface MTAServerResponse {
     players_list: MTAServerResponsePlayer[];
 }
 
-export declare interface MTAServerResponseRule {
+export interface MTAServerResponseLite {
+    name: string;
+    ip: string;
+    port: number;
+    version: string;
+    private: boolean;
+    players: number;
+    max_players: number;
+}
+
+export interface MTAServerResponseRule {
     name: string;
     value: string;
 }
 
-export declare interface MTAServerResponsePlayer {
+export interface MTAServerResponsePlayer {
     name: string;
     ping: number;
     score: number;
 }
+
+interface MTAServerFromListResponse {
+    name: string;
+    ip: string;
+    port: number;
+    version: string;
+    password: number;
+    players: number;
+    maxplayers: number;
+    keep: number;
+}
+
+////////////////////////////////
+
+const fixEncodedText = function (text: string): string {
+    const bytes = new Uint8Array([...text].map(char => char.charCodeAt(0)));
+    return utf8Decoder.decode(bytes);
+};
 
 ////////////////////////////////
 
@@ -126,6 +159,8 @@ export function getServerInfo(ip: string, port: number, timeout: number = socket
                 }
 
                 let returnTable: MTAServerResponse = {
+                    ip: ip,
+                    port: port,
                     name: info[1],
                     gamemode: info[2],
                     map: info[3],
@@ -183,6 +218,57 @@ export function getServerInfo(ip: string, port: number, timeout: number = socket
 
             client.on(`message`, messageListener);
             client.on(`error`, errorListener);
+        }
+    );
+}
+
+export function getServers(): Promise<MTAServerResponseLite[]> {
+    return new Promise(
+        async function (resolve, reject) {
+            https.get(`https://mtasa.com/api/`,
+                function (socket) {
+                    let receiveDataStr: string = ``;
+
+                    socket.on(`data`,
+                        function (chunk) {
+                            receiveDataStr += chunk;
+                        }
+                    );
+
+                    socket.on(`end`,
+                        function () {
+                            try {
+                                const unfilteredServers: MTAServerFromListResponse[] = JSON.parse(receiveDataStr);
+                                const filteredServers: MTAServerResponseLite[] = [];
+
+                                for (let i = 0; i < unfilteredServers.length; i++) {
+                                    const serverInfo = unfilteredServers[i];
+
+                                    filteredServers.push(
+                                        {
+                                            ip: serverInfo.ip,
+                                            max_players: serverInfo.maxplayers,
+                                            name: fixEncodedText(serverInfo.name),
+                                            players: serverInfo.players,
+                                            port: serverInfo.port,
+                                            version: serverInfo.version,
+                                            private: serverInfo.password === 1
+                                        }
+                                    );
+                                }
+
+                                resolve(filteredServers);
+                            } catch (e) {
+                                return reject(`Error parsing servers list`);
+                            }
+                        }
+                    );
+                }
+            ).on(`error`,
+                function () {
+                    return reject(`Error request servers list`);
+                }
+            );
         }
     );
 }

@@ -1,5 +1,7 @@
-export declare interface MTAServerResponse {
+export interface MTAServerResponse {
     name: string;
+    ip: string;
+    port: number;
     gamemode: string;
     map: string;
     version: string;
@@ -9,13 +11,23 @@ export declare interface MTAServerResponse {
     rules: MTAServerResponseRule[];
     players_list: MTAServerResponsePlayer[];
 }
-export declare interface MTAServerResponseRule {
+export interface MTAServerResponseLite {
+    name: string;
+    ip: string;
+    port: number;
+    version: string;
+    private: boolean;
+    players: number;
+    max_players: number;
+}
+export interface MTAServerResponseRule {
     name: string;
     value: string;
 }
-export declare interface MTAServerResponsePlayer {
+export interface MTAServerResponsePlayer {
     name: string;
     ping: number;
     score: number;
 }
 export declare function getServerInfo(ip: string, port: number, timeout?: number): Promise<MTAServerResponse>;
+export declare function getServers(): Promise<MTAServerResponseLite[]>;

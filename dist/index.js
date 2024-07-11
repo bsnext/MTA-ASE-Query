@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServerInfo = void 0;
+exports.getServers = exports.getServerInfo = void 0;
 const dgram = require("node:dgram");
+const https = require("node:https");
 const node_buffer_1 = require("node:buffer");
 const socketRequestTag = node_buffer_1.Buffer.from(`s`);
 const socketResponseTag = node_buffer_1.Buffer.from(`EYE1`);
@@ -9,6 +10,11 @@ const socketResponseGame = node_buffer_1.Buffer.from(`mta`);
 const endServerInfoSuffix = node_buffer_1.Buffer.from([0x01]);
 const startPlayerInfoPrefix = node_buffer_1.Buffer.from([0x00 | 0x01 | 0x02 | 0x04 | 0x08 | 0x16 | 0x32]);
 const socketTimeout = 7500;
+const utf8Decoder = new TextDecoder('utf-8');
+const fixEncodedText = function (str) {
+    const bytes = new Uint8Array([...str].map(char => char.charCodeAt(0)));
+    return utf8Decoder.decode(bytes);
+};
 function getServerInfo(ip, port, timeout = socketTimeout) {
     return new Promise(function (resolve, reject) {
         if ((port < 1) || (port > 65412)) {
@@ -67,6 +73,8 @@ function getServerInfo(ip, port, timeout = socketTimeout) {
                 });
             }
             let returnTable = {
+                ip: ip,
+                port: port,
                 name: info[1],
                 gamemode: info[2],
                 map: info[3],
@@ -116,4 +124,39 @@ function getServerInfo(ip, port, timeout = socketTimeout) {
     });
 }
 exports.getServerInfo = getServerInfo;
+function getServers() {
+    return new Promise(async function (resolve, reject) {
+        https.get(`https://mtasa.com/api/`, function (socket) {
+            let receiveDataStr = ``;
+            socket.on(`data`, function (chunk) {
+                receiveDataStr += chunk;
+            });
+            socket.on(`end`, function () {
+                try {
+                    const unfilteredServers = JSON.parse(receiveDataStr);
+                    const filteredServers = [];
+                    for (let i = 0; i < unfilteredServers.length; i++) {
+                        const serverInfo = unfilteredServers[i];
+                        filteredServers.push({
+                            ip: serverInfo.ip,
+                            max_players: serverInfo.maxplayers,
+                            name: fixEncodedText(serverInfo.name),
+                            players: serverInfo.players,
+                            port: serverInfo.port,
+                            version: serverInfo.version,
+                            private: serverInfo.password === 1
+                        });
+                    }
+                    resolve(filteredServers);
+                }
+                catch (e) {
+                    return reject(`Error parsing servers list`);
+                }
+            });
+        }).on(`error`, function () {
+            return reject(`Error request servers list`);
+        });
+    });
+}
+exports.getServers = getServers;
 //# sourceMappingURL=index.js.map
